@@ -8,7 +8,7 @@
         <link rel="stylesheet" href="${resource(dir: '', file: 'styles.css')}" type="text/css">
 
         <script>
-            function showEditForm(id, name, countryId, stars, website) {
+            function showEditFormHotel(id, name, countryId, stars, website) {
                 document.getElementById("editForm").style.display = "block";
                 document.getElementById("addForm").style.display = "none";
                 document.getElementById("editHotelId").value = id;
@@ -30,12 +30,52 @@
                 }
             }
 
+            function deleteHotel(id){
+                const myHeaders = new Headers();
+                myHeaders.append("Cookie", "JSESSIONID=77F63EE40DD84B360BA3338EBBF0F250");
+
+                const formdata = new FormData();
+                formdata.append("id", id);
+                formdata.append("_method", "DELETE");
+
+                const requestOptions = {
+                    method: "POST",
+                    headers: myHeaders,
+                    body: formdata,
+                    redirect: "follow"
+                };
+
+                fetch("http://localhost:8080/hotel/delete", requestOptions)
+                    .then((response) => {
+                        if (response.ok) {
+                            alert("Отель успешно удален");
+                            window.location.href = "http://localhost:8080/hotel/list";
+                        } else {
+                            alert("Ошибка при удалении отеля. Код: " + response.status);
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Ошибка:", error);
+                        alert("Произошла ошибка при отправке запроса.");
+                    });
+
+            }
+
             document.addEventListener('DOMContentLoaded', function () {
                 const message = "${message ?: ''}";
                 if (message) {
                     alert(message);
                 }
             });
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const isEditing = "${editHotel ? 'true' : 'false'}";
+                if (isEditing === 'true') {
+                    document.getElementById("editForm").style.display = "block";
+                    document.getElementById("addForm").style.display = "none";
+                }
+            });
+
         </script>
 
     </head>
@@ -56,15 +96,17 @@
             <div id="addForm" style="display: block;">
                 <h2>Добавить новый отель</h2>
                 <g:form controller="hotel" action="save" method="post">
-                    <input type="text" name="name" placeholder="Название отеля" required />
+                    <input type="text" name="name" value="${name ?: ""}" placeholder="Название отеля" required />
                     <select name="countryId" required>
-                        <option value="" disabled selected>Выберите страну</option>
+                        <option value="">Выберите страну</option>
                         <g:each in="${countries}" var="country">
-                            <option value="${country.id}">${country.name}</option>
+                            <option value="${country.id}" ${params.countryId?.toLong() == country.id ? 'selected="selected"' : ''}>${country.name}</option>
                         </g:each>
                     </select>
-                    <input type="number" name="stars" placeholder="Число звезд" min="1" max="5" required />
-                    <input type="url" name="website" placeholder="Ссылка на сайт (опционально)" />
+                    <input type="number" name="stars" value="${stars ?: ""}" placeholder="Число звезд" min="1" max="5" required />
+                    <input type="url" name="website" value="${website ?: ""}" pattern="https?:\/\/\S{2,}"
+                           title="Введите веб-сайт, начинающийся на http:// или https://"
+                           placeholder="Ссылка на сайт (опционально)" />
                     <button type="submit">Добавить</button>
                 </g:form>
             </div>
@@ -72,16 +114,18 @@
             <div id="editForm" style="display: none;">
                 <h2>Редактировать отель</h2>
                 <g:form controller="hotel" action="update" method="PUT">
-                    <input type="hidden" name="id" id="editHotelId" />
-                    <g:textField type="text" name="name" id="editHotelName" value="${editHotel?.name}" placeholder="Название отеля" required="required"/>
+                    <input type="hidden" name="id" id="editHotelId" value="${editHotel?.id}"/>
+                    <input type="text" name="name" id="editHotelName" value="${editHotel?.name}" placeholder="Название отеля" required="required"/>
                     <select name="countryId" id="editCountryId" value="${editHotel?.country?.id}" required>
                         <option value="-1" disabled>Выберите страну</option>
                         <g:each in="${countries}" var="country">
-                            <option value="${country?.id}">${country?.name}</option>
+                            <option value="${country?.id}" ${params.countryId?.toLong() == country.id ? 'selected="selected"' : ''}>${country?.name}</option>
                         </g:each>
                     </select>
-                    <g:textField type="number" id="editHotelStars" name="stars" value="${editHotel?.stars}" placeholder="Число звезд" min="1" max="5" required="required" />
-                    <g:textField type="url" name="website" id="editHotelWebsite" value="${editHotel?.website}" placeholder="Ссылка на сайт (опционально)" />
+                    <input type="number" id="editHotelStars" name="stars" value="${editHotel?.stars}" placeholder="Число звезд" min="1" max="5" required="required" />
+                    <input type="url" name="website" id="editHotelWebsite" value="${editHotel?.website}"
+                           pattern="https?:\/\/\S{2,}" title="Введите веб-сайт, начинающийся на http:// или https://"
+                           placeholder="Ссылка на сайт (опционально)" />
                     <button type="submit">Сохранить изменения</button>
                     <button type="button" onclick="showAddForm()">Отмена</button>
                 </g:form>
@@ -89,11 +133,11 @@
 
             <h2>Поиск отелей</h2>
             <g:form id="searchForm" controller="hotel" action="list" method="get">
-                <input type="text" name="hotelName" placeholder="Введите название отеля" value="${params.hotelName ?: ''}" oninput="resetPageNumber()" />
-                <select type="text" name="countryId" onchange="resetPageNumber()">
-                    <option value=-1 ${params.countryId == -1 ? 'selected="selected"' : ''}>Любая страна</option>
+                <input type="text" name="hotelNameSearch" placeholder="Введите название отеля" value="${hotelNameSearch ?: ''}" oninput="resetPageNumber()" />
+                <select type="text" name="countryIdSearch" onchange="resetPageNumber()">
+                    <option value=-1 ${countryIdSearch == -1 ? 'selected="selected"' : ''}>Любая страна</option>
                     <g:each in="${countries}" var="country">
-                        <option value="${country.id}" ${params.countryId?.toLong() == country.id ? 'selected="selected"' : ''}>${country.name}</option>
+                        <option value="${country.id}" ${countryIdSearch?.toLong() == country.id ? 'selected="selected"' : ''}>${country.name}</option>
                     </g:each>
                 </select>
                 <button type="submit">Найти</button>
@@ -108,24 +152,22 @@
                         </tr>
                         </thead>
                         <tbody>
-                        <g:each in="${hotels}" var="hotel">
-                            <tr>
-                                <td>${hotel.name}</td>
-                                <td>${hotel.country.name}</td>
-                                <td>${hotel.stars}</td>
-                                <td><g:if test="${hotel.website}"><a href="${hotel.website}">Перейти</a></g:if>
-                                    <g:else>Нет</g:else>
-                                <td>
-                                    <div class="options">
-                                        <button type="button" onclick="showEditForm('${hotel.id}', '${hotel.name}', '${hotel.country.id}', '${hotel.stars}', '${hotel.website ?: ''}')">Редактировать</button>
-                                        <g:form controller="hotel" action="delete" method="delete" style="display: inline;">
-                                            <input type="hidden" name="id" value="${hotel.id}" />
-                                            <button type="submit" onclick="return confirm('Вы уверены, что хотите удалить этот отель?')">Удалить</button>
-                                        </g:form>
-                                    </div>
-                                </td>
-                            </tr>
-                        </g:each>
+                            <tr></tr>
+                            <g:each in="${hotels}" var="hotel">
+                                <tr>
+                                    <td>${hotel.name}</td>
+                                    <td>${hotel.country.name}</td>
+                                    <td>${hotel.stars}</td>
+                                    <td><g:if test="${hotel.website}"><a href="${hotel.website}">Перейти</a></g:if>
+                                        <g:else>Нет</g:else>
+                                    <td>
+                                        <div class="options">
+                                            <button type="button" onclick="showEditFormHotel('${hotel.id}', '${hotel.name}', '${hotel.country.id}', '${hotel.stars}', '${hotel.website ?: ''}')">Редактировать</button>
+                                            <button type="button" onclick="if (confirm('Вы уверены, что хотите удалить этот отель?')) deleteHotel('${hotel.id}')">Удалить</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </g:each>
                         </tbody>
                     </table>
                 </div>

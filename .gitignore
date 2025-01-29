@@ -1,3 +1,5 @@
 .gradle/
 out/
 .idea
+build/
+grails-app/js

@@ -15,10 +15,18 @@ class CountryController {
         try{
             countryService.save(country)
             flash.message = "Страна успешно добавлена"
+            redirect action: "list", params: [message: flash.message]
         } catch(ValidationException validationException){
-            flash.message = "Ошибка при добавлении"
+            flash.message = "Страна с таким названием уже существует"
+            def countries = countryService.searchResult("", 1 as short)
+            render view: "list", model: [
+                    name: params.name,
+                    capital: params.capital,
+                    countries: countries,
+                    countryCount: countries.getTotalCount(),
+                    message: flash.message
+            ]
         }
-        redirect action: "list", params: [message: flash.message]
     }
 
     def edit = {
@@ -32,23 +40,23 @@ class CountryController {
         try{
             countryService.save(country)
             flash.message = "Страна успешно обновлена"
-        } catch(Exception exception){
-            flash.message = "Ошибка при обновлении"
-            def countries = countryService.searchResult("", 1 as Short)
-            render view: "list", model:[
-                    editCountry: country,
-                    countries: countries,
+            redirect action: "list", params: [message: flash.message]
+        } catch(ValidationException validationException){
+            flash.message = "Страна с таким названием уже существует"
+            def countries = countryService.searchResult(params.nameQuery, params.pageNumber)
+            render view: "list", model: [
+                    editCountry : country,
+                    countries   : countries,
                     countryCount: countries.getTotalCount(),
-                    message: params.message
+                    message     : flash.message
             ]
         }
-        redirect action: "list", params: [message: flash.message]
     }
 
     def list(String searchQuery, Short pageNumber){
         if(!pageNumber) pageNumber = 1
         def countries = countryService.searchResult(searchQuery, pageNumber)
-        [countries: countries, pageNumber: pageNumber, countryCount: countries.getTotalCount(), message: params.message]
+        [countries: countries, pageNumber: pageNumber, countryCount: countries.getTotalCount(), message: params.message, nameQuery: searchQuery]
     }
 
     def delete = {

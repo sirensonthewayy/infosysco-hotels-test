@@ -15,7 +15,7 @@ class Hotel {
         name validator: {val, obj ->
             Hotel existingHotel = Hotel.findByNameAndCountry(val, obj.country)
             if (existingHotel && existingHotel.id != obj.id) {
-                return 'hotel.name.validator.error' // Уникальный код ошибки
+                return 'hotel.name.validator.error'
             }
         }
     }

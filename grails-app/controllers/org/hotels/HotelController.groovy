@@ -17,11 +17,29 @@ class HotelController {
         def hotel = new Hotel(name: params.name, country: country, stars: params.stars, website: params.website)
         try{
             hotelService.save(hotel)
-            flash.message = "Отель успешно добавлен"
+            flash.message = "Отель успешно обновлен"
+            redirect action: "list", id: hotel.id, params: [message: flash.message]
         } catch(ValidationException validationException){
-            flash.message = "Ошибка при добавлении"
+            if(validationException.message.contains("website")){
+                flash.message = "Ссылка на веб-сайт указана некорректно"
+            } else if(validationException.message.contains("name")){
+                flash.message = "Отель с данным названием уже существует в этой стране"
+            } else if(validationException.message.contains("stars")){
+                flash.message = "Число звезд указано некорректно"
+            }
+            def hotels = hotelService.searchResult("", -1, 1)
+            render view: "list", model: [
+                    id: hotel.id,
+                    name: params.name,
+                    stars: params.stars,
+                    website: params.website,
+                    countries: countryService.list(sort: "name"),
+                    countrySearch: params.countrySearch,
+                    hotels: hotels,
+                    hotelCount: hotels.getTotalCount(),
+                    message: flash.message
+            ]
         }
-        redirect action: "list", params: [message: flash.message]
     }
 
     def edit = {
@@ -39,21 +57,36 @@ class HotelController {
             flash.message = "Отель успешно обновлен"
             redirect action: "list", id: hotel.id, params: [message: flash.message]
         } catch(ValidationException validationException){
-            flash.message = "Ошибка при обновлении"
+            if(validationException.message.contains("website")){
+                flash.message = "Ссылка на веб-сайт указана некорректно"
+            } else if(validationException.message.contains("name")){
+                flash.message = "Отель с данным названием уже существует в этой стране"
+            } else if(validationException.message.contains("stars")){
+                flash.message = "Число звезд указано некорректно"
+            }
+            def hotels = hotelService.searchResult("", -1, 1)
             render view: "list", model: [
+                    id: hotel.id,
                     editHotel: hotel,
-                    hotels: hotelService.searchResult("", -1, 1),
-                    countries: countryService.list(),
-                    message: params.message
+                    hotels: hotels,
+                    hotelCount: hotels.getTotalCount(),
+                    countries: countryService.list(sort: "name"),
+                    message: flash.message
             ]
         }
     }
 
-    def list(String hotelName, Long countryId, Short pageNumber) {
-        def countries = countryService.list()
+    def list(String hotelNameSearch, Long countryIdSearch, Short pageNumber) {
+        def countries = countryService.list(sort: "name")
         if(!pageNumber) pageNumber = 1
-        def hotels = hotelService.searchResult(hotelName, countryId, pageNumber)
-        [hotels: hotels, countries: countries, pageNumber: pageNumber, hotelCount: hotels.getTotalCount(), message: params.message]
+        def hotels = hotelService.searchResult(hotelNameSearch, countryIdSearch, pageNumber)
+        [hotels: hotels,
+         countries: countries,
+         pageNumber: pageNumber,
+         hotelCount: hotels.getTotalCount(),
+         message: params.message,
+         hotelNameSearch: hotelNameSearch,
+         countryIdSearch: countryIdSearch]
     }
 
     def delete = {

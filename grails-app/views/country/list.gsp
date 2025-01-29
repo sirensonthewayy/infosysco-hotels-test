@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="${resource(dir: '', file: 'styles.css')}" type="text/css">
 
     <script>
-        function showEditForm(id, name, capital) {
+        function showEditFormCountry(id, name, capital) {
             document.getElementById("editForm").style.display = "block";
             document.getElementById("addForm").style.display = "none";
             document.getElementById("editCountryId").value = id;
@@ -28,10 +28,49 @@
             }
         }
 
+        function deleteCountry(id){
+            const myHeaders = new Headers();
+            myHeaders.append("Cookie", "JSESSIONID=77F63EE40DD84B360BA3338EBBF0F250");
+
+            const formdata = new FormData();
+            formdata.append("id", id);
+            formdata.append("_method", "DELETE");
+
+            const requestOptions = {
+                method: "POST",
+                headers: myHeaders,
+                body: formdata,
+                redirect: "follow"
+            };
+
+            fetch("http://localhost:8080/country/delete", requestOptions)
+                .then((response) => {
+                    if (response.ok) {
+                        alert("Страна успешно удалена");
+                        window.location.href = "http://localhost:8080/country/list";
+                    } else {
+                        alert("Ошибка при удалении страны. Код: " + response.status);
+                    }
+                })
+                .catch((error) => {
+                    console.error("Ошибка:", error);
+                    alert("Произошла ошибка при отправке запроса.");
+                });
+
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const message = "${message ?: ''}";
             if (message) {
                 alert(message);
+            }
+        })
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const isEditing = "${editCountry ? 'true' : 'false'}";
+            if (isEditing === 'true') {
+                document.getElementById("editForm").style.display = "block";
+                document.getElementById("addForm").style.display = "none";
             }
         });
     </script>
@@ -53,8 +92,8 @@
         <div id="addForm" style="display: block;">
             <h2>Добавить новую страну</h2>
             <g:form controller="country" action="save" method="post">
-                <input type="text" name="name" placeholder="Название страны" required />
-                <input type="text" name="capital" placeholder="Столица" required/>
+                <input type="text" name="name" value="${name ?: ""}" placeholder="Название страны" required />
+                <input type="text" name="capital" value="${capital ?: ""}" placeholder="Столица" required/>
                 <button type="submit">Добавить</button>
             </g:form>
         </div>
@@ -62,9 +101,9 @@
         <div id="editForm" style="display: none;">
             <h2>Редактировать страну</h2>
             <g:form controller="country" action="update" method="PUT">
-                <input type="hidden" name="id" id="editCountryId" />
-                <g:textField type="text" name="name" id="editCountryName" value="${editCountry?.name}" placeholder="Название" required="required"/>
-                <g:textField type="text" id="editCountryCapital" name="capital" value="${editCountry?.capital}" placeholder="Столица" required="required" />
+                <input type="hidden" name="id" id="editCountryId" value="${editCountry?.id}" />
+                <input type="text" name="name" id="editCountryName" value="${editCountry?.name}" placeholder="Название" required="required"/>
+                <input type="text" id="editCountryCapital" name="capital" value="${editCountry?.capital}" placeholder="Столица" required="required" />
                 <button type="submit">Сохранить изменения</button>
                 <button type="button" onclick="showAddForm()">Отмена</button>
             </g:form>
@@ -72,7 +111,7 @@
 
         <h2>Поиск стран</h2>
         <g:form id="searchForm" controller="country" action="list" method="get">
-            <input type="text" name="searchQuery" placeholder="Введите название страны" value="${params.name ?: ''}" oninput="resetPageNumber()" />
+            <input type="text" name="searchQuery" placeholder="Введите название страны" value="${nameQuery ?: ''}" oninput="resetPageNumber()" />
             <button type="submit">Найти</button>
             <div id="searchResults">
                 <table>
@@ -89,11 +128,8 @@
                             <td>${country.capital}</td>
                             <td>
                                 <div class="options">
-                                    <button type="button" onclick="showEditForm('${country.id}', '${country.name}', '${country.capital}')">Редактировать</button>
-                                    <g:form controller="country" action="delete" method="delete" style="display: inline;">
-                                        <input type="hidden" name="id" value="${country.id}" />
-                                        <button type="submit" onclick="return confirm('Вы уверены, что хотите удалить эту страну? Удаление страны повлечет за собой и удаление ВСЕХ отелей в этой стране.')">Удалить</button>
-                                    </g:form>
+                                    <button type="button" onclick="showEditFormCountry('${country.id}', '${country.name}', '${country.capital}')">Редактировать</button>
+                                    <button type="button" onclick="if (confirm('Вы уверены, что хотите удалить эту страну? Удаление страны повлечет за собой и удаление ВСЕХ отелей в этой стране.')) deleteCountry('${country.id}')">Удалить</button>
                                 </div>
                             </td>
                         </tr>
